@@ -1,0 +1,50 @@
+services:
+
+  chat-server:
+    build:
+      context: ../
+      dockerfile: ./docker/server.Dockerfile
+    networks:
+      - proxy
+      - rds
+    env_file:
+      - ../.env
+    deploy:
+      mode: replicated
+      replicas: 3
+    depends_on:
+      redis:
+        condition: service_healthy
+    labels:
+        - traefik.http.routers.socket-router.rule=PathPrefix(`/ws`)
+        - traefik.http.services.chat.loadbalancer.server.port=80
+
+  redis:
+    image: redis/redis-stack
+    networks:
+      - rds
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      interval: 1s
+      timeout: 3s
+      retries: 5
+      
+  traefik-reverse-proxy:
+    image: traefik:v2.2
+    command:
+      - --entrypoints.web.address=:80
+      - --providers.docker=true
+    networks:
+      - proxy
+    ports:
+      - "3333:80"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      - chat-server
+
+networks:
+  rds:
+    name: rds
+  proxy:
+    name: proxy
