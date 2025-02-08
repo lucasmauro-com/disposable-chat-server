@@ -17,7 +17,11 @@ var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
 	CheckOrigin: func(r *http.Request) bool {
-		return r.Header.Get("Origin") == os.Getenv("ACCEPTED_ORIGIN")
+		var acceptedOrigin = os.Getenv("ACCEPTED_ORIGIN")
+		if acceptedOrigin == "*" {
+			return true
+		}
+		return r.Header.Get("Origin") == acceptedOrigin
 	},
 }
 
